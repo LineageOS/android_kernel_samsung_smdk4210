@@ -216,6 +216,8 @@ struct dsim_config {
 	unsigned char bta_timeout;
 	unsigned short rx_timeout;
 	enum dsim_video_mode_type e_lane_swap;
+
+    unsigned long hs_toggle;
 };
 
 struct dsim_lcd_config {

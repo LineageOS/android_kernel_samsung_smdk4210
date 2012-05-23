@@ -190,6 +190,7 @@ struct max8997_buck1_dvs_funcs {
  * @buck_ramp_en: enable BUCKx RAMP
  * @buck_ramp_delay: ramp delay(usec) BUCK RAMP register(0x15)
  * @flash_cntl_val: value of MAX8997_REG_FLASH_CNTL register
+ * @mr_debounce_time: manual reset debounce time (sec), (default 7sec)
  */
 struct max8997_platform_data {
 	struct max8997_regulator_data	*regulators;
@@ -208,6 +209,7 @@ struct max8997_platform_data {
 	bool				buck_ramp_en;
 	int				buck_ramp_delay;
 	int				flash_cntl_val;
+    int             mr_debounce_time;
 	struct max8997_power_data	*power;
 	struct max8997_muic_data	*muic;
 #ifdef CONFIG_VIBETONZ

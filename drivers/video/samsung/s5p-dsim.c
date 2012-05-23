@@ -167,6 +167,8 @@ void s5p_dsim_frame_done_interrupt_enable(u8 enable)
 void set_dsim_lcd_enabled(void)
 {
 	dsim.dsim_lcd_info->lcd_enabled = 1;
+    if (dsim.dsim_info->hs_toggle)
+              s5p_dsim_frame_done_interrupt_enable(1);
 }
 
 void set_dsim_hs_clk_toggle_count(u8 count)
@@ -460,7 +462,8 @@ static irqreturn_t s5p_dsim_isr(int irq, void *dev_id)
 						s5p_dsim_toggle_hs_clock(dsim.reg_base);
 						if (!dsim_toggle_per_frame_count) {
 							s5p_dsim_frame_done_interrupt_enable(0);
-							/* P8: schedule_delayed_work(&dsim_work, msecs_to_jiffies(500)); */
+                            if (likely(dsim.dsim_info->hs_toggle))
+                                schedule_delayed_work(&dsim_work, dsim.dsim_info->hs_toggle);
 						}
 						if (dsim_toggle_per_frame_count > 0)
 							dsim_toggle_per_frame_count--;
@@ -1319,6 +1322,9 @@ static int s5p_dsim_probe(struct platform_device *pdev)
 	dsim.state = DSIM_STATE_HSCLKEN;
 
 	dev_info(&pdev->dev, "mipi-dsi driver has been probed.\n");
+
+    if (dsim.dsim_info->hs_toggle)
+        s5p_dsim_frame_done_interrupt_enable(1);
 #if 0
 #ifdef CONFIG_HAS_WAKELOCK
 #ifdef CONFIG_HAS_EARLYSUSPEND

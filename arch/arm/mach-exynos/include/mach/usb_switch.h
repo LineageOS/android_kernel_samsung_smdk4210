@@ -19,4 +19,6 @@ extern void usb_switch_unlock(void);
 extern void usb_switch_set_path(enum usb_path_t path);
 extern void usb_switch_clr_path(enum usb_path_t path);
 
+extern void set_usb_connection_state(bool connected);
+
 #endif
