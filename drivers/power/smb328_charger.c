@@ -78,17 +78,22 @@ static int smb328_get_charging_status(struct i2c_client *client)
 
 	smb328_i2c_read(chg->client,
 		SMB328A_BATTERY_CHARGING_STATUS_A, &data_a);
+#if 0
 	dev_info(&client->dev, "%s : charging status A(0x%02x)\n",
 		__func__, data_a);
+#endif
 	smb328_i2c_read(chg->client,
 		SMB328A_BATTERY_CHARGING_STATUS_B, &data_b);
+#if 0
 	dev_info(&client->dev, "%s : charging status B(0x%02x)\n",
 		__func__, data_b);
+#endif
 	smb328_i2c_read(chg->client,
 		SMB328A_BATTERY_CHARGING_STATUS_C, &data_c);
+#if 0
 	dev_info(&client->dev, "%s : charging status C(0x%02x)\n",
 		__func__, data_c);
-
+#endif
 	/* check for safety timer in USB charging */
 	/* If safety timer is activated in USB charging, reset charger */
 #if 1
@@ -749,8 +754,10 @@ static int smb328_get_property(struct power_supply *psy,
 		return -EINVAL;
 	}
 
+#if 0
 	dev_info(&chip->client->dev, "%s: smb328_get_property (%d,%d)\n",
 		__func__, psp, val->intval);
+#endif
 
 	return 0;
 }
