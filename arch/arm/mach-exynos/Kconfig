@@ -493,6 +493,11 @@ config BUSFREQ
 	bool "Busfreq with PPC/PPMU"
 	depends on EXYNOS4_CPUFREQ
 
+config BUSFREQ_QOS
+	bool "QoS with Busfreq"
+	depends on BUSFREQ
+	default n
+
 config BUSFREQ_OPP
 	bool "Busfreq with OPP"
 	depends on EXYNOS4_CPUFREQ || EXYNOS5_CPUFREQ
@@ -502,6 +507,25 @@ config DEVFREQ_BUS
 	depends on EXYNOS4_CPUFREQ
 	select PM_DEVFREQ
 	select ARM_EXYNOS4_BUS_DEVFREQ
+
+choice
+	prompt "QoS LEVEL By Resolution"
+	depends on BUSFREQ_QOS || BUSFREQ_OPP
+	default BUSFREQ_QOS_LEVEL_NONE
+
+config BUSFREQ_QOS_NONE
+	bool "QoS Setting is not required"
+
+config BUSFREQ_QOS_1024X600
+	bool "QoS for 1024x600 (like P2)"
+
+config BUSFREQ_QOS_1280X720
+	bool "QoS for 1280x720 (like M0/T0)"
+
+config BUSFREQ_QOS_1280X800
+	bool "QoS for 1280x800 or 800x1280 (like Q1/P8)"
+
+endchoice
 
 endmenu
 
@@ -517,6 +541,14 @@ config GPIO_MIDAS_02_BD
 	bool "GPIO configuration for Midas 02 BD"
 	depends on MACH_SLP_MIDAS
 
+config BUSFREQ_L2_160M
+	bool "Busfreq L2 level use 160MHz"
+	default n
+	help
+	Busfreq uses 160MHz for L2, not 133MHz. Optimize busfreq
+	dvfs level transition for LCD high resolution.
+	This enable 160MHz of L2 level. Q1 has high LCD resolution,
+	so uses busfreq dvfs L2 as 160MHz.
 
 config SEC_THERMISTOR
 	bool "Use external thermistor with ADC"
@@ -799,6 +831,7 @@ config MACH_P8
 
 config MACH_P8LTE
 	bool "P8 LTE board"
+	select S3C64XX_DEV_SPI
 
 endchoice
 
