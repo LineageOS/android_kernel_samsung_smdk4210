@@ -47,6 +47,17 @@
 #include <linux/i2c/mxt224_u1.h>
 #endif
 
+/* for led timeout */
+#include <linux/wakelock.h>
+
+int led_timeout = 0; /* never time out by default */
+static struct timer_list led_timer;
+static void bl_off(struct work_struct *bl_off_work);
+static DECLARE_WORK(bl_off_work, bl_off);
+static void handle_led_timeout(unsigned long data);
+
+static void do_touch_led_control(int data);
+
 /*
 touchkey register
 */
@@ -765,6 +776,12 @@ void touchkey_work_func(struct work_struct *p)
 		/* printk(KERN_DEBUG "[TouchKey] keycode:%d pressed:%d\n",
 		   touchkey_keycode[keycode_index], pressed); */
 	}
+
+	/* has the timer already expired?  if yes, reenable backlight */
+	if (led_timeout>0) {
+		do_touch_led_control(1);
+	}
+
 	set_touchkey_debug('A');
 	enable_irq(IRQ_TOUCH_INT);
 }
@@ -1004,6 +1021,11 @@ static int sec_touchkey_late_resume(struct early_suspend *h)
 	i2c_touchkey_write(&get_touch, 1);
 #endif
 
+	/* restart the timer if needed */
+	if (led_timeout > 0) {
+		mod_timer(&led_timer, jiffies + (HZ*led_timeout));
+	}
+
 	enable_irq(IRQ_TOUCH_INT);
 
 	return 0;
@@ -1126,6 +1148,10 @@ static int i2c_touchkey_probe(struct i2c_client *client,
 	}
 #endif				/* CONFIG_TARGET_LOCALE_NA */
 #endif
+
+	/* Setup the timer for the timeouts */
+	setup_timer(&led_timer, handle_led_timeout, 0);
+
 	set_touchkey_debug('K');
 	return 0;
 }
@@ -1289,38 +1315,54 @@ static ssize_t touch_update_read(struct device *dev,
 	return count;
 }
 
-static ssize_t touch_led_control(struct device *dev,
-				 struct device_attribute *attr, const char *buf,
-				 size_t size)
+static void do_touch_led_control(int data)
 {
-	int data;
 	int errnum;
 
-	if (sscanf(buf, "%d\n", &data) == 1) {
+	/* if led_timeout is non-zero and we are turning on, restart timer */
+	if (led_timeout>0 && data == 1) {
+		mod_timer(&led_timer, jiffies + (HZ*led_timeout));
+	}
+
 #if defined(CONFIG_MACH_Q1_BD)
+	if (data == 1)
+		data = 0x10;
+	else if (data == 2)
+		data = 0x20;
+#elif defined(CONFIG_TARGET_LOCALE_NA)
+	if (store_module_version >= 8) {
 		if (data == 1)
 			data = 0x10;
 		else if (data == 2)
 			data = 0x20;
-#elif defined(CONFIG_TARGET_LOCALE_NA)
-		if (store_module_version >= 8) {
-			if (data == 1)
-				data = 0x10;
-			else if (data == 2)
-				data = 0x20;
-		}
+	}
 #endif
+
+	/* only write if status is changing */
+	if (touchkey_led_status != data) {
 		errnum = i2c_touchkey_write((u8 *) &data, 1);
 		if (errnum == -ENODEV)
 			touchled_cmd_reversed = 1;
 
 		touchkey_led_status = data;
+	}
+}
+
+static ssize_t touch_led_control(struct device *dev,
+				 struct device_attribute *attr, const char *buf,
+				 size_t size)
+{
+	int data;
+
+	if (sscanf(buf, "%d\n", &data) == 1) {
+		do_touch_led_control(data);
 	} else {
 		printk(KERN_DEBUG "[TouchKey] touch_led_control Error\n");
 	}
 
 	return size;
 }
+
 
 static ssize_t touchkey_enable_disable(struct device *dev,
 				       struct device_attribute *attr,
@@ -1664,6 +1706,43 @@ static DEVICE_ATTR(autocal_enable, S_IRUGO | S_IWUSR | S_IWGRP, NULL,
 static DEVICE_ATTR(autocal_stat, S_IRUGO | S_IWUSR | S_IWGRP,
 		   autocalibration_status, NULL);
 #endif				/* CONFIG_TARGET_LOCALE_NA */
+
+static ssize_t led_timeout_read( struct device *dev, struct device_attribute *attr, char *buf )
+{
+	return sprintf(buf,"%d\n", led_timeout);
+}
+
+static ssize_t led_timeout_write( struct device *dev, struct device_attribute *attr, const char *buf, size_t size )
+{
+	sscanf(buf,"%d\n", &led_timeout);
+
+	if (led_timeout>0) {
+                /* start timer; it's fine if light is already off */
+                mod_timer(&led_timer, jiffies + (HZ*led_timeout));
+	}
+
+	return size;
+}
+
+static void bl_off(struct work_struct *bl_off_work)
+{
+	/* we have timed out, turn the lights off */
+	/* but only if led_timeout is still non-zero */
+	if (led_timeout>0) {
+		do_touch_led_control(2);
+	}
+
+	return;
+}
+
+static void handle_led_timeout(unsigned long data)
+{
+	/* we cannot call the timeout directly as it causes a kernel spinlock BUG, schedule it instead */
+	schedule_work(&bl_off_work);
+}
+
+static DEVICE_ATTR(led_timeout, S_IRUGO | S_IWUGO, led_timeout_read, led_timeout_write);
+
 static int __init touchkey_init(void)
 {
 	int ret = 0;
@@ -1832,6 +1911,12 @@ static int __init touchkey_init(void)
 		pr_err("Failed to create device file(%s)!\n",
 		       dev_attr_touch_sensitivity.attr.name);
 	}
+	if (device_create_file(sec_touchkey,
+		&dev_attr_led_timeout) < 0) {
+		pr_err("Failed to create device file(%s)!\n",
+		       dev_attr_led_timeout.attr.name);
+	}
+
 	touchkey_wq = create_singlethread_workqueue("sec_touchkey_wq");
 	if (!touchkey_wq)
 		return -ENOMEM;
