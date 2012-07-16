@@ -16,6 +16,24 @@
       "revId": "9cc3cd9d3dac7f5dcc7a1a359f516c50bc2b00de",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAU3///4s\u003d",
+        "filename": "drivers/video/samsung/s3cfb.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 242,
+      "author": {
+        "id": 3720
+      },
+      "writtenOn": "2012-07-16T19:57:52Z",
+      "side": 0,
+      "message": "An inline function would have to have its body moved from s3cfb.c to here in order for GCC to accept this. I don\u0027t know why 4.3 accepted this code before though..",
+      "parentUuid": "AAAAU3///68\u003d",
+      "revId": "9cc3cd9d3dac7f5dcc7a1a359f516c50bc2b00de",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
