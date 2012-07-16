@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAU3///68\u003d",
+        "filename": "drivers/video/samsung/s3cfb.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 242,
+      "author": {
+        "id": 2874
+      },
+      "writtenOn": "2012-07-16T16:20:08Z",
+      "side": 0,
+      "message": "I do not know that much about gcc internals, but could not removing the inline flag here have an impact on performance?",
+      "revId": "9cc3cd9d3dac7f5dcc7a1a359f516c50bc2b00de",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
