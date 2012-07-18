@@ -1749,7 +1749,7 @@ static void handle_led_timeout(unsigned long data)
 	schedule_work(&bl_off_work);
 }
 
-static DEVICE_ATTR(led_timeout, S_IRUGO | S_IWUGO, led_timeout_read, led_timeout_write);
+static DEVICE_ATTR(led_timeout, S_IRUGO | S_IWUSR | S_IWGRP, led_timeout_read, led_timeout_write);
 
 static ssize_t force_disable_read( struct device *dev, struct device_attribute *attr, char *buf )
 {
@@ -1775,7 +1775,7 @@ static ssize_t force_disable_write( struct device *dev, struct device_attribute 
 	return size;
 }
 
-static DEVICE_ATTR(force_disable, S_IRUGO | S_IWUGO, force_disable_read, force_disable_write);
+static DEVICE_ATTR(force_disable, S_IRUGO | S_IWUSR | S_IWGRP, force_disable_read, force_disable_write);
 
 static int __init touchkey_init(void)
 {
