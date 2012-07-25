@@ -26,6 +26,7 @@
 #include <linux/firmware.h>
 #include "wacom_i2c_func.h"
 #include "wacom_i2c_flash.h"
+#include "wacom_i2c_extended_attributes.h"
 #ifdef COOR_WORK_AROUND
 #include "wacom_i2c_coord_tables.h"
 #endif
@@ -822,6 +823,12 @@ static int wacom_i2c_probe(struct i2c_client *client,
 		if (ret) {
 			printk(KERN_ERR
 			       "[E-PEN]: failed to create sysfs group\n");
+			goto err_sysfs_create_group;
+		}
+    ret = wacom_i2c_create_extended_attributes(wac_i2c->dev);
+		if (ret) {
+			printk(KERN_ERR
+			       "[E-PEN]: failed to create sysfs extended attributes\n");
 			goto err_sysfs_create_group;
 		}
 	}
