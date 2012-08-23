@@ -46,6 +46,10 @@
 #endif
 #include <linux/i2c/touchkey_i2c.h>
 
+/* disable debugging */
+#undef pr_info
+#define pr_info(fmt, ...) do {} while(0);
+
 /* M0 Touchkey temporary setting */
 
 #if defined(CONFIG_MACH_M0) || defined(CONFIG_MACH_C1VZW) || defined(CONFIG_MACH_C2)
