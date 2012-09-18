@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -19,7 +19,7 @@
 #include "mali_linux_pm.h"
 
 #if USING_MALI_PMM
-#include "mali_pmm.h"
+#include "mali_pm.h"
 #endif
 
 #include <linux/clk.h>
@@ -507,7 +507,7 @@ _mali_osk_errcode_t g3d_power_domain_control(int bpower_on)
 	{
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 		MALI_DEBUG_PRINT(3,("_mali_osk_pmm_dev_activate \n"));
-		_mali_osk_pmm_dev_activate();
+		_mali_osk_pm_dev_activate();
 #else //MALI_PMM_RUNTIME_JOB_CONTROL_ON
 		void __iomem *status;
 		u32 timeout;
@@ -530,7 +530,7 @@ _mali_osk_errcode_t g3d_power_domain_control(int bpower_on)
 	{
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 		MALI_DEBUG_PRINT( 4,("_mali_osk_pmm_dev_idle\n"));
-		_mali_osk_pmm_dev_idle();
+		_mali_osk_pm_dev_idle();
 
 #else //MALI_PMM_RUNTIME_JOB_CONTROL_ON
 		void __iomem *status;
