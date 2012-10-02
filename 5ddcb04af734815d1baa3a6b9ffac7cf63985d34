@@ -1,0 +1,9 @@
+Change-Id: I5ddcb04af734815d1baa3a6b9ffac7cf63985d34
+Code-Review+2: Daniel Hillenbrand <codeworkx@cyanogenmod.com>
+Verified+1: Daniel Hillenbrand <codeworkx@cyanogenmod.com>
+Code-Review+1: Andrew Dodd <atd7@cornell.edu>
+Submitted-by: Daniel Hillenbrand <codeworkx@cyanogenmod.com>
+Submitted-at: Tue, 02 Oct 2012 12:58:56 -0700
+Reviewed-on: http://review.cyanogenmod.com/24153
+Project: CyanogenMod/android_kernel_samsung_smdk4210
+Branch: refs/heads/jellybean
