@@ -1318,7 +1318,11 @@ void ath6kl_rx(struct htc_target *target, struct htc_packet *packet)
 
 	if (ept == ar->ctrl_ep) {
 		if (test_bit(WMI_ENABLED, &ar->flag)) {
+#ifdef CONFIG_MACH_PX
+			ath6kl_check_wow_status(ar, skb, true);
+#else
 			ath6kl_check_wow_status(ar);
+#endif
 			ath6kl_wmi_control_rx(ar->wmi, skb);
 			return;
 		}
@@ -1355,7 +1359,11 @@ void ath6kl_rx(struct htc_target *target, struct htc_packet *packet)
 		return;
 	}
 
+#ifdef CONFIG_MACH_PX
+	ath6kl_check_wow_status(ar, skb, false);
+#else
 	ath6kl_check_wow_status(ar);
+#endif
 
 	min_hdr_len = sizeof(struct ethhdr) + sizeof(struct wmi_data_hdr) +
 		      sizeof(struct ath6kl_llc_snap_hdr);
