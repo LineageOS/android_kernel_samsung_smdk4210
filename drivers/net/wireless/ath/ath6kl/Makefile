@@ -35,6 +35,7 @@ ath6kl-y += txrx.o
 ath6kl-y += wmi.o
 ath6kl-y += core.o
 ath6kl-$(CONFIG_MACH_PX) += pm.o
+ath6kl-$(CONFIG_MACH_PX) += softmac.o
 ath6kl-$(CONFIG_NL80211_TESTMODE) += testmode.o
 ath6kl-$(CONFIG_ATH6KL_SDIO) += sdio.o
 ath6kl-$(CONFIG_ATH6KL_USB) += usb.o
