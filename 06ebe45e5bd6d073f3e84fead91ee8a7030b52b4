@@ -2,6 +2,23 @@
   "comments": [
     {
       "key": {
+        "uuid": "AAAAbH//9Ho\u003d",
+        "filename": "drivers/char/exynos_mem.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 275,
+      "author": {
+        "id": 570
+      },
+      "writtenOn": "2012-12-20T19:04:54Z",
+      "side": 1,
+      "message": "Getting compile errors with\nerror: ISO C90 forbids mixed declarations and code [-Wdeclaration-after-statement]\n\none I clean these up, I get them for lines \n276\n277\n281\n282\n\nMoving all the declarations out makes the compile work.\n\nHowever my C is not up to scratch - please check below\n\n-----------------------------------------------------------\n\n        struct exynos_mem *mem;\n        bool cacheable;\n        dma_addr_t start;\n        u32 pfn;\n        u32 size;\n        int i;\n        int allowed;\n        struct simple_cma_descriptor *b;\n\n/* Devices not having DMA CMA acess shouldn\u0027t be using this in any case at all */\n#ifndef CONFIG_DMA_CMA\n        return -EINVAL;\n#endif\n\n        mem \u003d (struct exynos_mem *)filp-\u003eprivate_data;\n        cacheable \u003d mem-\u003ecacheable;\n        start \u003d 0;\n        pfn \u003d 0;\n        size \u003d vma-\u003evm_end - vma-\u003evm_start;\n\n        allowed \u003d false;",
+      "revId": "06ebe45e5bd6d073f3e84fead91ee8a7030b52b4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "AAAAbH//9QU\u003d",
         "filename": "drivers/char/exynos_mem.c",
         "patchSetId": 1
