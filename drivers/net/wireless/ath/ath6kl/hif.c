@@ -16,8 +16,6 @@
  */
 #include "hif.h"
 
-#include <linux/module.h>
-
 #include "core.h"
 #include "target.h"
 #include "hif-ops.h"
@@ -62,8 +60,6 @@ int ath6kl_hif_rw_comp_handler(void *context, int status)
 
 	return 0;
 }
-EXPORT_SYMBOL(ath6kl_hif_rw_comp_handler);
-
 #define REG_DUMP_COUNT_AR6003   60
 #define REGISTER_DUMP_LEN_MAX   60
 
@@ -90,7 +86,7 @@ static void ath6kl_hif_dump_fw_crash(struct ath6kl *ar)
 	}
 
 	ath6kl_dbg(ATH6KL_DBG_IRQ, "register dump data address 0x%x\n",
-		   regdump_addr);
+		regdump_addr);
 	regdump_addr = TARG_VTOP(ar->target_type, regdump_addr);
 
 	/* fetch register dump data */
@@ -118,10 +114,101 @@ static void ath6kl_hif_dump_fw_crash(struct ath6kl *ar)
 
 }
 
+#define DUMP_MASK_FULL_STACK                   0x01
+#define DUMP_MASK_DBGLOG                       0x02
+
+#define AR6003_HW211_KERNELSTACK_BASE          0x543938
+#define AR6003_HW211_KERNELSTACK_SIZE          2560
+#define MAX_DUMP_BYTE_NUM_ONE_ITERATION        256
+#define DUMP_STACK_OFFSET                      0x40
+
+#define AR6003_HW211_DBGLOG_ADDR               0x543730
+#define AR6003_HW211_DBGLOG_SIZE               3300
+
+static void ath6kl_hif_dump(struct ath6kl *ar, u32 fw_dump_addr, u32 len)
+{
+	__le32 regdump_val[MAX_DUMP_BYTE_NUM_ONE_ITERATION / 4];
+	u32 read_len = 0;
+	u32 i = 0,count;
+	int ret;
+	u32 phy_addr = TARG_VTOP(ar->target_type, fw_dump_addr);
+
+	len = (len + 3) & (~0x3);
+	fw_dump_addr = (fw_dump_addr + 3) & (~0x3);
+
+	while(len) {
+		read_len = len;
+		if(read_len > MAX_DUMP_BYTE_NUM_ONE_ITERATION)
+			read_len = MAX_DUMP_BYTE_NUM_ONE_ITERATION;
+
+		phy_addr = TARG_VTOP(ar->target_type, fw_dump_addr);
+		ret = ath6kl_diag_read(ar, phy_addr, (u8 *) &regdump_val[0], read_len);
+		if (ret) {
+			ath6kl_warn("failed to get register dump: %d\n", ret);
+			return;
+		}
+
+		count = read_len / 4;
+		for (i = 0; i < count; i += 4) {
+			ath6kl_info("0x%08x: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+				    le32_to_cpu(fw_dump_addr + 4 * i),
+				    le32_to_cpu(regdump_val[i]),
+				    le32_to_cpu(regdump_val[i + 1]),
+				    le32_to_cpu(regdump_val[i + 2]),
+				    le32_to_cpu(regdump_val[i + 3]));
+		}
+
+		len -= read_len;
+		fw_dump_addr += read_len;
+	}
+}
+
+static void ath6kl_hif_dump_fw_more(struct ath6kl *ar, u32 mask)
+{
+	u32 fw_dump_addr, fw_dump_len;
+	u32 address;
+	int ret;
+
+	if (ar->target_type != TARGET_TYPE_AR6003 ) {
+		ath6kl_warn("not support dump stack for type: %x\n", ar->target_type);
+		return;
+	}
+
+	if(mask & DUMP_MASK_FULL_STACK) {
+		if(ar->wiphy->hw_version == AR6003_HW_2_1_1_VERSION) {
+			fw_dump_addr = AR6003_HW211_KERNELSTACK_BASE - DUMP_STACK_OFFSET;
+			fw_dump_len = AR6003_HW211_KERNELSTACK_SIZE + DUMP_STACK_OFFSET;
+			ath6kl_warn("firmware stack:0x%x, len:0x%x\n",
+				    AR6003_HW211_KERNELSTACK_BASE,
+				    AR6003_HW211_KERNELSTACK_SIZE);
+			ath6kl_hif_dump(ar, fw_dump_addr, fw_dump_len);
+		}
+	}
+
+	if(mask & DUMP_MASK_DBGLOG) {
+		if(ar->wiphy->hw_version == AR6003_HW_2_1_1_VERSION) {
+			address = TARG_VTOP(ar->target_type,
+					    AR6003_HW211_DBGLOG_ADDR);
+			ret = ath6kl_diag_read32(ar, address, &fw_dump_addr);
+			if(!ret && fw_dump_addr) {
+				fw_dump_len = AR6003_HW211_DBGLOG_SIZE;
+				ath6kl_warn("fw dblog:0x%x, len:0x%x\n",
+					    fw_dump_addr,
+					    AR6003_HW211_DBGLOG_SIZE);
+				ath6kl_hif_dump(ar, fw_dump_addr, fw_dump_len);
+			}
+		}
+	}
+}
+
 static int ath6kl_hif_proc_dbg_intr(struct ath6kl_device *dev)
 {
 	u32 dummy;
 	int ret;
+#if 0 // by bbelief
+	struct ath6kl_vif *vif;
+	vif = ath6kl_vif_first(dev->ar);
+#endif
 
 	ath6kl_warn("firmware crashed\n");
 
@@ -135,7 +222,15 @@ static int ath6kl_hif_proc_dbg_intr(struct ath6kl_device *dev)
 		ath6kl_warn("Failed to clear debug interrupt: %d\n", ret);
 
 	ath6kl_hif_dump_fw_crash(dev->ar);
+	if (debug_mask & ATH6KL_DBG_STACK_DUMP)
+		ath6kl_hif_dump_fw_more(dev->ar, DUMP_MASK_FULL_STACK |
+					DUMP_MASK_DBGLOG);
 	ath6kl_read_fwlogs(dev->ar);
+	ath6kl_recovery_err_notify(dev->ar, ATH6KL_FW_ASSERT);
+
+#if 0 // by bbelief
+	cfg80211_priv_event(vif->ndev, "HANG", GFP_ATOMIC);
+#endif
 
 	return ret;
 }
@@ -285,7 +380,7 @@ static int ath6kl_hif_proc_counter_intr(struct ath6kl_device *dev)
 			     dev->irq_en_reg.cntr_int_status_en;
 
 	ath6kl_dbg(ATH6KL_DBG_IRQ,
-		   "valid interrupt source(s) in COUNTER_INT_STATUS: 0x%x\n",
+		"valid interrupt source(s) in COUNTER_INT_STATUS: 0x%x\n",
 		counter_int_status);
 
 	/*
@@ -360,7 +455,7 @@ static int ath6kl_hif_proc_cpu_intr(struct ath6kl_device *dev)
 	}
 
 	ath6kl_dbg(ATH6KL_DBG_IRQ,
-		   "valid interrupt source(s) in CPU_INT_STATUS: 0x%x\n",
+		"valid interrupt source(s) in CPU_INT_STATUS: 0x%x\n",
 		cpu_int_status);
 
 	/* Clear the interrupt */
@@ -397,6 +492,10 @@ static int proc_pending_irqs(struct ath6kl_device *dev, bool *done)
 	u8 host_int_status = 0;
 	u32 lk_ahd = 0;
 	u8 htc_mbox = 1 << HTC_MAILBOX;
+#if 0 // by bbelief
+	struct ath6kl_vif *vif;
+	vif = ath6kl_vif_first(dev->ar);
+#endif
 
 	ath6kl_dbg(ATH6KL_DBG_IRQ, "proc_pending_irqs: (dev: 0x%p)\n", dev);
 
@@ -435,8 +534,9 @@ static int proc_pending_irqs(struct ath6kl_device *dev, bool *done)
 		if (status)
 			goto out;
 
-		ath6kl_dump_registers(dev, &dev->irq_proc_reg,
-				      &dev->irq_en_reg);
+		if (AR_DBG_LVL_CHECK(ATH6KL_DBG_IRQ))
+			ath6kl_dump_registers(dev, &dev->irq_proc_reg,
+					 &dev->irq_en_reg);
 
 		/* Update only those registers that are enabled */
 		host_int_status = dev->irq_proc_reg.host_int_status &
@@ -453,8 +553,19 @@ static int proc_pending_irqs(struct ath6kl_device *dev, bool *done)
 			    htc_mbox) {
 				rg = &dev->irq_proc_reg;
 				lk_ahd = le32_to_cpu(rg->rx_lkahd[HTC_MAILBOX]);
+#if 1 // by bbelief
 				if (!lk_ahd)
 					ath6kl_err("lookAhead is zero!\n");
+#else
+				if (!lk_ahd) {
+					ath6kl_err("lookAhead is zero!\n");
+					cfg80211_priv_event(vif->ndev,
+					"HANG", GFP_ATOMIC);
+					ath6kl_hif_rx_control(dev, false);
+					ssleep(3);
+					status = -ENOMEM;
+				}
+#endif
 			}
 		}
 	}
@@ -479,8 +590,18 @@ static int proc_pending_irqs(struct ath6kl_device *dev, bool *done)
 		 */
 		status = ath6kl_htc_rxmsg_pending_handler(dev->htc_cnxt,
 							  lk_ahd, &fetched);
+
+#if 1 // by bbelief
 		if (status)
 			goto out;
+#else
+		if (status && status != -ECANCELED) {
+			cfg80211_priv_event(vif->ndev, "HANG", GFP_ATOMIC);
+			ath6kl_hif_rx_control(dev, false);
+			ssleep(3);
+			goto out;
+		}
+#endif
 
 		if (!fetched)
 			/*
@@ -566,7 +687,6 @@ int ath6kl_hif_intr_bh_handler(struct ath6kl *ar)
 
 	return status;
 }
-EXPORT_SYMBOL(ath6kl_hif_intr_bh_handler);
 
 static int ath6kl_hif_enable_intrs(struct ath6kl_device *dev)
 {

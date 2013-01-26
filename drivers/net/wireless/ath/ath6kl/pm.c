@@ -17,26 +17,51 @@
 #include "core.h"
 #include "debug.h"
 
+#if 1 // by bbelief
+static bool ath6kl_parse_event_pkt_for_wake_lock(struct sk_buff *skb)
+#else
 static bool ath6kl_parse_event_pkt_for_wake_lock(struct ath6kl *ar,
-						 struct sk_buff *skb)
+					struct sk_buff *skb)
+#endif
+
 {
 	u16 cmd_id;
+	bool need_wake = false;
 
 	if (skb->len < sizeof(u16))
-		return false;
+		return need_wake;
 
-	cmd_id = *(const u16 *) skb->data;
-	if (le16_to_cpu(cmd_id) == WMI_CONNECT_EVENTID)
-		return true;
+	 cmd_id = *(const u16 *) skb->data;
+	 cmd_id = le16_to_cpu(cmd_id);
 
-	/* Don't wake lock the system for other events */
-	return false;
+#if 0 // by bbelief
+	if (test_and_clear_bit(WOW_RESUME_PRINT, &ar->flag)) {
+		if (cmd_id == WMI_CONNECT_EVENTID)
+			ath6kl_dbg(ATH6KL_DBG_SUSPEND,
+				"(wow) WMI_CONNECT_EVENTID\n");
+		else
+			ath6kl_dbg(ATH6KL_DBG_SUSPEND,
+				"(wow) wmi event id : 0x%x\n", cmd_id);
+	}
+#endif
+
+	 switch (cmd_id) {
+	 case WMI_CONNECT_EVENTID:
+		need_wake = true;
+		break;
+	 default:
+		/* Don't wake lock the system for other events */
+		break;
+	 }
+
+	 return need_wake;
 }
 
 static bool ath6kl_parse_ip_pkt_for_wake_lock(struct sk_buff *skb)
 {
 	const u8 ipsec_keepalve[] = { 0x11, 0x94, 0x11, 0x94, 0x00,
 				      0x09, 0x00, 0x00, 0xff };
+	bool need_wake = true;
 	u16 size;
 	u8 *udp;
 	u8 ihl;
@@ -61,11 +86,11 @@ static bool ath6kl_parse_ip_pkt_for_wake_lock(struct sk_buff *skb)
 			 *
 			 * IPSec over UDP NAT keepalive packet. Just ignore
 			 */
-			return false;
+			need_wake = false;
 		}
 	}
 
-	return true;
+	return need_wake;
 }
 
 static bool ath6kl_parse_data_pkt_for_wake_lock(struct ath6kl *ar,
@@ -74,25 +99,37 @@ static bool ath6kl_parse_data_pkt_for_wake_lock(struct ath6kl *ar,
 	struct net_device *ndev;
 	struct ath6kl_vif *vif;
 	struct ethhdr *hdr;
+	bool need_wake = false;
 	u16 dst_port;
 
 	vif = ath6kl_vif_first(ar);
 	if (!vif)
-		return false;
+		return need_wake;
 
 	if (skb->len < sizeof(struct ethhdr))
-		return false;
+		return need_wake;
 
 	hdr = (struct ethhdr *) skb->data;
+
+#if 0 // by bbelief
+	if (test_and_clear_bit(WOW_RESUME_PRINT, &ar->flag)) {
+		ath6kl_dbg(ATH6KL_DBG_SUSPEND,
+			   "(wow) dest mac:%pM, src mac:%pM, type/len :%04x\n",
+			   hdr->h_dest, hdr->h_source,
+			   be16_to_cpu(hdr->h_proto));
+	}
+#endif
 
 	if (!is_multicast_ether_addr(hdr->h_dest)) {
 		switch (ntohs(hdr->h_proto)) {
 		case 0x0800: /* IP */
-			return ath6kl_parse_ip_pkt_for_wake_lock(skb);
+			need_wake = ath6kl_parse_ip_pkt_for_wake_lock(skb);
+			break;
 		case 0x888e: /* EAPOL */
 		case 0x88c7: /* RSN_PREAUTH */
 		case 0x88b4: /* WAPI */
-			return true;
+			need_wake = true;
+			break;
 		default:
 			break;
 		}
@@ -104,24 +141,25 @@ static bool ath6kl_parse_data_pkt_for_wake_lock(struct ath6kl *ar,
 				(vif->nw_type == AP_NETWORK ||
 				(ndev->flags & IFF_ALLMULTI ||
 				ndev->flags & IFF_MULTICAST)))
-					return true;
+					need_wake = true;
 		}
 	} else if (vif->nw_type == AP_NETWORK) {
 		switch (ntohs(hdr->h_proto)) {
-		case 0x0806:
-			return true;
 		case 0x0800: /* IP */
 			if (skb->len >= 14 + 20 + 2) {
 				dst_port = *(u16 *)(skb->data + 14 + 20);
 				/* dhcp req */
-				return (ntohs(dst_port) == 0x43);
+				need_wake = (ntohs(dst_port) == 0x43);
 			}
+			break;
+		case 0x0806:
+			need_wake = true;
 		default:
 			break;
 		}
 	}
 
-	return false;
+	return need_wake;
 }
 
 void ath6kl_config_suspend_wake_lock(struct ath6kl *ar, struct sk_buff *skb,
@@ -129,7 +167,11 @@ void ath6kl_config_suspend_wake_lock(struct ath6kl *ar, struct sk_buff *skb,
 {
 	struct ath6kl_vif *vif;
 #ifdef CONFIG_HAS_WAKELOCK
+#if 1 /* 20120927 Matt */
+	unsigned long wl_timeout = HZ;
+#else
 	unsigned long wl_timeout = 5;
+#endif /* 20120927 Matt */
 #endif
 	bool need_wake = false;
 
@@ -144,24 +186,30 @@ void ath6kl_config_suspend_wake_lock(struct ath6kl *ar, struct sk_buff *skb,
 			skb && test_bit(CONNECTED, &vif->flags)) {
 		if (is_event_pkt) { /* Ctrl pkt received */
 			need_wake =
-				ath6kl_parse_event_pkt_for_wake_lock(ar, skb);
+#if 1	// by bbelief
+				ath6kl_parse_event_pkt_for_wake_lock(skb);
+#else
+			ath6kl_parse_event_pkt_for_wake_lock(ar, skb);
+#endif
+			if (need_wake) {
 #ifdef CONFIG_HAS_WAKELOCK
-			if (need_wake)
 				wl_timeout = 3 * HZ;
 #endif
+			}
 		} else /* Data pkt received */
-			need_wake =
-				ath6kl_parse_data_pkt_for_wake_lock(ar, skb);
+			need_wake = ath6kl_parse_data_pkt_for_wake_lock(ar,
+									skb);
 	}
 
+	if (need_wake) {
 #ifdef CONFIG_HAS_WAKELOCK
-	if (need_wake)
 		/*
 		 * Keep the host wake up if there is any event
 		 * and pkt comming in.
 		 */
 		wake_lock_timeout(&ar->wake_lock, wl_timeout);
 #endif
+	}
 }
 #ifdef CONFIG_HAS_WAKELOCK
 void ath6kl_p2p_acquire_wakelock(struct ath6kl *ar, int wl_timeout)
@@ -178,7 +226,6 @@ void ath6kl_p2p_release_wakelock(struct ath6kl *ar)
 	return;
 }
 #endif
-
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void ath6kl_early_suspend(struct early_suspend *handler)
 {
