@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAc3//9is\u003d",
+        "filename": "sound/soc/codecs/mc1n2/Kconfig",
+        "patchSetId": 6
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 2793
+      },
+      "writtenOn": "2013-01-28T00:33:15Z",
+      "side": 0,
+      "message": "This patch is reverting micswap, which will break I777.\n\nWe COULD consider moving the change to userspace thanks to opensource audio though.",
+      "revId": "3f2e0e6b92066f03480f0bd2bde25d87d8384bae",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
