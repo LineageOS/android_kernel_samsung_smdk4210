@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAc3//8AY\u003d",
+        "filename": "arch/arm/configs/cyanogenmod_i9100_defconfig",
+        "patchSetId": 8
+      },
+      "lineNbr": 1140,
+      "author": {
+        "id": 4832
+      },
+      "writtenOn": "2013-02-01T20:11:15Z",
+      "side": 1,
+      "message": "Duplicate header",
+      "revId": "e6603a69b8e7dc85b2faa8f8c69e3dd652258c69",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAc3//8AU\u003d",
+        "filename": "arch/arm/configs/cyanogenmod_i9100_defconfig",
+        "patchSetId": 8
+      },
+      "lineNbr": 2357,
+      "author": {
+        "id": 4832
+      },
+      "writtenOn": "2013-02-01T20:11:15Z",
+      "side": 1,
+      "message": "It\u0027s necessary?",
+      "revId": "e6603a69b8e7dc85b2faa8f8c69e3dd652258c69",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
