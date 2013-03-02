@@ -1570,9 +1570,6 @@ static int mtp_bind_config(struct usb_configuration *c, bool ptp_config)
 	mtpg->function.unbind = mtpg_function_unbind;
 	mtpg->function.set_alt = mtpg_function_set_alt;
 	mtpg->function.disable = mtpg_function_disable;
-#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
-	mtpg->function.set_config_desc = mtp_set_config_desc;
-#endif
 
 	return usb_add_function(c, &mtpg->function);
 }
