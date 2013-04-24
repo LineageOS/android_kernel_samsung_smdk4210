@@ -75,8 +75,8 @@
 
 #define MELFAS_MAX_TOUCH	10
 
-#define TS_MAX_X_COORD		600
-#define TS_MAX_Y_COORD		1024
+#define TS_MAX_X_COORD		1024
+#define TS_MAX_Y_COORD		600
 #define TS_MAX_Z_TOUCH		255
 #define TS_MAX_W_TOUCH		30
 
